@@ -1,98 +1,70 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 
 const TextToAudio = () => {
-  const [audioUrl, setAudioUrl] = useState("");
-  const [inputText, setInputText] = useState("");
-  const [negativePrompt, setNegativePrompt] = useState("");
-  const [durationSeconds, setDurationSeconds] = useState(6.5);
-  const [guidanceScale, setGuidanceScale] = useState(0);
-  const [seed, setSeed] = useState(5);
-  const [numWaveforms, setNumWaveforms] = useState(1);
+  const [text, setText] = useState('');
+  const [voice, setVoice] = useState(0); // 0 for male, 1 for female
+  const [audioSrc, setAudioSrc] = useState(null);
 
-  const handleTextToAudio = async () => {
-    const requestOptions = {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        input_text: inputText,
-        negative_prompt: negativePrompt,
-        duration_seconds: durationSeconds,
-        guidance_scale: guidanceScale,
-        seed: seed,
-        num_waveforms: numWaveforms,
-      }),
-    };
+  const handleSubmit = async () => {
+    setAudioSrc(null);
+    try {
+      const response = await fetch('/api/textToAudio', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          text: text,
+          voice: voice
+        })
+      });
 
-    const response = await fetch("/api/textToAudio", requestOptions);
-    const audioBlob = await response.blob();
-    const audioUrl = URL.createObjectURL(audioBlob);
-    setAudioUrl(audioUrl);
-    //   const data = await response.json();
-
-    // Assuming the audio file URL is returned in the 'audio_url' field of the response
-    //   setAudioUrl(data.audio_url);
-  };
-  const clearAudio = () => {
-    setAudioUrl("");
+      // Handle response
+      if (response.ok) {
+        const blob = await response.blob();
+        const audioUrl = URL.createObjectURL(blob);
+        setAudioSrc(audioUrl);
+      } else {
+        console.error('Failed to generate audio');
+      }
+    } catch (error) {
+      // Handle error
+      console.error('Error:', error);
+    }
   };
 
   return (
     <div>
+      <h1>Text to Audio Converter</h1>
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="Enter text here"
+      />
       <div>
-        <label>Input Text:</label>
-        <input
-          type="text"
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-        />
+        <label>
+          <input
+            type="radio"
+            value={0}
+            checked={voice === 0}
+            onChange={() => setVoice(0)}
+          />
+          Male Voice
+        </label>
+        <label>
+          <input
+            type="radio"
+            value={1}
+            checked={voice === 1}
+            onChange={() => setVoice(1)}
+          />
+          Female Voice
+        </label>
       </div>
-      <div>
-        <label>Negative Prompt:</label>
-        <input
-          type="text"
-          value={negativePrompt}
-          onChange={(e) => setNegativePrompt(e.target.value)}
-        />
-      </div>
-      <div>
-        <label>Duration (seconds):</label>
-        <input
-          type="number"
-          value={durationSeconds}
-          onChange={(e) => setDurationSeconds(parseFloat(e.target.value))}
-          max="10"
-        />
-      </div>
-      <div>
-        <label>Guidance Scale:</label>
-        <input
-          type="number"
-          value={guidanceScale}
-          onChange={(e) => setGuidanceScale(parseFloat(e.target.value))}
-        />
-      </div>
-      <div>
-        <label>Seed:</label>
-        <input
-          type="number"
-          value={seed}
-          onChange={(e) => setSeed(parseFloat(e.target.value))}
-        />
-      </div>
-      <div>
-        <label>Number of Waveforms:</label>
-        <input
-          type="number"
-          value={numWaveforms}
-          onChange={(e) => setNumWaveforms(parseFloat(e.target.value))}
-        />
-      </div>
-      <button onClick={handleTextToAudio}>Convert This Text to Audio</button>
-      <button onClick={clearAudio}>Clear Audio Output</button>
-
-      {audioUrl && (
+      <button onClick={handleSubmit}>Convert to Audio</button>
+      {audioSrc && (
         <audio controls>
-          <source src={audioUrl} type="audio/mpeg" />
+          <source src={audioSrc} type="audio/mpeg" />
           Your browser does not support the audio element.
         </audio>
       )}
